@@ -111,13 +111,13 @@ public:
 class Jucator
 {
 private:
-    std::string nume;
+    std::string NumeJucator;
     Scor scor;
 
 public:
-    Jucator(const std::string& nume)
+    Jucator(const std::string& NumeJucator)
     {
-        this->nume = nume;
+        this->NumeJucator = NumeJucator;
     }
 
     void actualizeazaScor(int puncte)
@@ -137,7 +137,7 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const Jucator& jucator)
     {
-        os << "Jucator: " << jucator.nume << ", " << jucator.scor;
+        os << "Jucator: " << jucator.NumeJucator << ", " << jucator.scor;
         return os;
     }
 };
@@ -145,8 +145,8 @@ public:
 class Joc
 {
 private:
-    std::vector<Tara> tari;
     Jucator jucator;
+    std::vector<Tara> tari;
     std::vector<Tara> tariIntrebate;
 
     void amestecaTari()

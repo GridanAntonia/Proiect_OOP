@@ -8,33 +8,54 @@
 #include <sstream>
 #include <random>
 
+enum class Continent {
+    EUROPA,
+    AFRICA,
+    ASIA,
+    AMERICA,
+    TOATE
+};
+
+enum class Dificultate {
+    USOR,
+    DIFICIL
+};
+
 class Tara
 {
 private:
     std::string nume;
     std::string capitala;
+    Continent continent;
+    bool populara;
 
 public:
     Tara() {};
 
     ~Tara() {};
 
-    explicit Tara(const std::string& nume, const std::string& capitala)
+    explicit Tara(const std::string& nume, const std::string& capitala, Continent continent, bool populara = false)
     {
         this->nume = nume;
         this->capitala = capitala;
+        this->continent = continent;
+        this->populara = populara;
     }
 
     Tara(const Tara& other)
     {
         this->nume = other.nume;
         this->capitala = other.capitala;
+        this->continent = other.continent;
+        this->populara = other.populara;
     }
 
     Tara& operator=(const Tara& other)
     {
         this->nume = other.nume;
         this->capitala = other.capitala;
+        this->continent = other.continent;
+        this->populara = other.populara;
         return *this;
     }
 
@@ -58,14 +79,31 @@ public:
         return capitala;
     }
 
+    Continent getContinent() const
+    {
+        return continent;
+    }
+    bool estePopulara() const
+    {
+        return populara;
+    }
+
     bool operator==(const Tara& other) const
     {
-        return nume == other.nume && capitala == other.capitala;
+        return nume == other.nume && capitala == other.capitala && continent == other.continent;
     }
 
     friend std::ostream& operator<<(std::ostream& os, const Tara& tara)
     {
-        os << "Tara: " << tara.nume << ", Capitala: " << tara.capitala;
+        os << "Tara: " << tara.nume << ", Capitala: " << tara.capitala << ", Continentul: ";
+        switch(tara.continent) {
+        case Continent::EUROPA: os << "Europa"; break;
+        case Continent::AFRICA: os << "Africa"; break;
+        case Continent::ASIA: os << "Asia"; break;
+        case Continent::AMERICA: os << "America"; break;
+        case Continent::TOATE: os << "Toate"; break;
+        default: os << "Necunoscut";
+    }
         return os;
     }
 };
@@ -148,6 +186,9 @@ private:
     Jucator jucator;
     std::vector<Tara> tari;
     std::vector<Tara> tariIntrebate;
+    Continent continentCurent;
+    Dificultate dificultate;
+
 
     void amestecaTari()
     {
@@ -155,29 +196,38 @@ private:
         std::shuffle(tari.begin(), tari.end(), rng);
     }
 
-    Tara getTaraAleatorie()
-    {
-        if (tariIntrebate.size() == tari.size())
-        {
-            std::cerr << "Eroare: Toate tarile au fost deja intrebate.\n";
-            exit(1);
+    Tara getTaraAleatorie(Continent continent) {
+    std::vector<Tara> tariDisponibile;
+
+
+    for (const auto& tara : tari) {
+        bool esteNeintrebata = (std::find(tariIntrebate.begin(), tariIntrebate.end(), tara) == tariIntrebate.end());
+        bool continentPotrivit = (continent == Continent::TOATE) || (tara.getContinent() == continent);
+
+        if (esteNeintrebata && continentPotrivit) {
+            tariDisponibile.push_back(tara);
         }
-
-        Tara taraAleatorie = tari[std::rand() % tari.size()];
-
-        while (std::find(tariIntrebate.begin(), tariIntrebate.end(), taraAleatorie) != tariIntrebate.end())
-        {
-            taraAleatorie = tari[std::rand() % tari.size()];
-        }
-
-        tariIntrebate.push_back(taraAleatorie);
-        return taraAleatorie;
     }
+
+    if (tariDisponibile.empty()) {
+        std::cerr << "Eroare: Toate tarile din categoria selectata au fost deja intrebate.\n";
+        exit(1);
+    }
+
+
+    std::mt19937 rng(std::time(0));
+    std::uniform_int_distribution<int> dist(0, tariDisponibile.size() - 1);
+    Tara taraAleatorie = tariDisponibile[dist(rng)];
+
+    tariIntrebate.push_back(taraAleatorie);
+    return taraAleatorie;
+}
+
 
 public:
 
-    explicit Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari)
-        : jucator(numeJucator), tari(listaTari)
+    explicit Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari, Continent continent, Dificultate dificultate)
+        : jucator(numeJucator), tari(listaTari), continentCurent(continent), dificultate(dificultate)
     {
         if (tari.empty())
         {
@@ -187,236 +237,274 @@ public:
         amestecaTari();
     }
 
-    void start()
-    {
-        tariIntrebate.clear();
-        std::cout << "Bun venit, " << jucator << "!\n";
-        std::cout << "Ghiceste capitala fiecarei tari.\n";
+    void start() {
+    tariIntrebate.clear();
+    std::cout << "Bun venit, " << jucator << "!\n";
+    std::cout << "Ghiceste capitala fiecarei tari.\n";
 
-        for (int i = 0; i < 10; ++i)
-        {
-            Tara taraCurenta = getTaraAleatorie();
-            std::string capitalaJucator;
+    for (int i = 0; i < 10; ++i) {
+        Tara taraCurenta = getTaraAleatorie(continentCurent);
+        std::string capitalaJucator;
 
-            std::cout << "\n--- Intrebarea " << (i + 1) << " ---\n";
-            std::cout << "Care este capitala tarii " << taraCurenta.getNume() << "? ";
+        std::cout << "\n--- Intrebarea " << (i + 1) << " ---\n";
+        std::cout << "Care este capitala tarii " << taraCurenta.getNume() << "?\n";
+        std::cout << "Tasteaza -hint- pentru a descoperi prima litera: ";
+        std::getline(std::cin, capitalaJucator);
+
+        if (capitalaJucator == "hint" || capitalaJucator == "Hint") {
+            getIndiciu(taraCurenta);
+            std::cout << "Ai pierdut 2 puncte!\n";
+            std::cout << "Acum, scrie numele capitalei -> ";
             std::getline(std::cin, capitalaJucator);
-
-            if (capitalaJucator == taraCurenta.getCapitala())
-            {
-                jucator.actualizeazaScor(10);
-                std::cout << "Corect! Ai acum " << jucator.getScor() << " puncte.\n";
-            }
-            else
-            {
-                std::cout << "Gresit! Capitala corecta este " << taraCurenta.getCapitala() << ".\n";
-            }
+            jucator.actualizeazaScor(-2);
         }
 
-        std::cout << "Joc terminat. " << jucator << "\n";
+        if (capitalaJucator == taraCurenta.getCapitala()) {
+            jucator.actualizeazaScor(10);
+            std::cout << "Corect! Ai acum " << jucator.getScor() << " puncte.\n";
+        } else {
+            std::cout << "Gresit! Capitala corecta este " << taraCurenta.getCapitala() << ".\n";
+        }
     }
+
+    std::cout << "Joc terminat. " << jucator << "\n";
+}
+
 
     friend std::ostream& operator<<(std::ostream& os, const Joc& joc)
     {
         os << "Jocul este in desfasurare. " << joc.jucator;
         return os;
     }
+
+    void getIndiciu(const Tara& tara) const {
+        if (tara.getCapitala().empty()) {
+            std::cout << "Nu exista indiciu disponibil.\n";
+        }
+        std::cout << "Prima litera a capitalei este: " + tara.getCapitala().substr(0, 1)<<"\n";
+
+    }
+
 };
 
 int main()
 {
     std::vector<Tara> tari =
-    {
-        Tara("Afganistan", "Kabul"),
-        Tara("Africa de Sud", "Pretoria"),
-        Tara("Albania", "Tirana"),
-        Tara("Algeria", "Alger"),
-        Tara("Andorra", "Andorra la Vella"),
-        Tara("Angola", "Luanda"),
-        Tara("Antigua si Barbuda", "Saint John's"),
-        Tara("Arabia Saudita", "Riyadh"),
-        Tara("Argentina", "Buenos Aires"),
-        Tara("Armenia", "Erevan"),
-        Tara("Australia", "Canberra"),
-        Tara("Austria", "Viena"),
-        Tara("Azerbaidjan", "Baku"),
-        Tara("Bahamas", "Nassau"),
-        Tara("Bahrain", "Manama"),
-        Tara("Bangladesh", "Dhaka"),
-        Tara("Barbados", "Bridgetown"),
-        Tara("Belarus", "Minsk"),
-        Tara("Belgia", "Bruxelles"),
-        Tara("Belize", "Belmopan"),
-        Tara("Benin", "Porto-Novo"),
-        Tara("Bhutan", "Thimphu"),
-        Tara("Bolivia", "Sucre"),
-        Tara("Bosnia si Hertegovina", "Sarajevo"),
-        Tara("Botswana", "Gaborone"),
-        Tara("Brazilia", "Brasilia"),
-        Tara("Brunei", "Bandar Seri Begawan"),
-        Tara("Bulgaria", "Sofia"),
-        Tara("Burkina Faso", "Ouagadougou"),
-        Tara("Burundi", "Bujumbura"),
-        Tara("Cambodgia", "Phnom Penh"),
-        Tara("Camerun", "Yaounde"),
-        Tara("Canada", "Ottawa"),
-        Tara("Capul Verde", "Praia"),
-        Tara("Cehia", "Praga"),
-        Tara("Chile", "Santiago"),
-        Tara("China", "Beijing"),
-        Tara("Cipru", "Nicosia"),
-        Tara("Columbia", "Bogota"),
-        Tara("Comoros", "Moroni"),
-        Tara("Congo", "Brazzaville"),
-        Tara("Congo (Republica Democrată)", "Kinshasa"),
-        Tara("Coreea de Nord", "Pyongyang"),
-        Tara("Coreea de Sud", "Seoul"),
-        Tara("Costa Rica", "San Jose"),
-        Tara("Croatia", "Zagreb"),
-        Tara("Cuba", "Havana"),
-        Tara("Danemarca", "Copenhaga"),
-        Tara("Djibouti", "Djibouti"),
-        Tara("Dominica", "Roseau"),
-        Tara("Ecuador", "Quito"),
-        Tara("Egipt", "Cairo"),
-        Tara("El Salvador", "San Salvador"),
-        Tara("Elvetria", "Bern"),
-        Tara("Emiratele Arabe Unite", "Abu Dhabi"),
-        Tara("Eritrea", "Asmara"),
-        Tara("Estonia", "Tallinn"),
-        Tara("Eswatini", "Mbabane"),
-        Tara("Etiopia", "Addis Ababa"),
-        Tara("Fiji", "Suva"),
-        Tara("Filipine", "Manila"),
-        Tara("Finlanda", "Helsinki"),
-        Tara("Franta", "Paris"),
-        Tara("Gabon", "Libreville"),
-        Tara("Gambia", "Banjul"),
-        Tara("Georgia", "Tbilisi"),
-        Tara("Germania", "Berlin"),
-        Tara("Ghana", "Accra"),
-        Tara("Grecia", "Atena"),
-        Tara("Grenada", "Saint George's"),
-        Tara("Guatemala", "Guatemala City"),
-        Tara("Guineea", "Conakry"),
-        Tara("Guineea-Bissau", "Bissau"),
-        Tara("Guineea Ecuatoriala", "Malabo"),
-        Tara("Guyana", "Georgetown"),
-        Tara("Haiti", "Port-au-Prince"),
-        Tara("Honduras", "Tegucigalpa"),
-        Tara("India", "New Delhi"),
-        Tara("Indonezia", "Jakarta"),
-        Tara("Iordania", "Amman"),
-        Tara("Irak", "Baghdad"),
-        Tara("Iran", "Teheran"),
-        Tara("Irlanda", "Dublin"),
-        Tara("Islanda", "Reykjavik"),
-        Tara("Israel", "Ierusalim"),
-        Tara("Italia", "Roma"),
-        Tara("Jamaica", "Kingston"),
-        Tara("Japonia", "Tokyo"),
-        Tara("Kazahstan", "Nur-Sultan"),
-        Tara("Kenya", "Nairobi"),
-        Tara("Kiribati", "Tarawa"),
-        Tara("Kuwait", "Kuwait City"),
-        Tara("Kyrgyzstan", "Bishkek"),
-        Tara("Laos", "Vientiane"),
-        Tara("Letonia", "Riga"),
-        Tara("Liban", "Beirut"),
-        Tara("Lesotho", "Maseru"),
-        Tara("Liberia", "Monrovia"),
-        Tara("Libia", "Tripoli"),
-        Tara("Liechtenstein", "Vaduz"),
-        Tara("Lituania", "Vilnius"),
-        Tara("Luxemburg", "Luxemburg"),
-        Tara("Madagascar", "Antananarivo"),
-        Tara("Malawi", "Lilongwe"),
-        Tara("Malaysia", "Kuala Lumpur"),
-        Tara("Maldives", "Male"),
-        Tara("Mali", "Bamako"),
-        Tara("Malta", "Valletta"),
-        Tara("Maroc", "Rabat"),
-        Tara("Marshall Islands", "Majuro"),
-        Tara("Mauritania", "Nouakchott"),
-        Tara("Mauritius", "Port Louis"),
-        Tara("Mexic", "Mexico City"),
-        Tara("Micronezia", "Palikir"),
-        Tara("Moldova", "Chisinau"),
-        Tara("Monaco", "Monaco"),
-        Tara("Mongolia", "Ulaanbaatar"),
-        Tara("Muntenegru", "Podgorica"),
-        Tara("Mozambic", "Maputo"),
-        Tara("Myanmar", "Naypyidaw"),
-        Tara("Namibia", "Windhoek"),
-        Tara("Nauru", "Yaren"),
-        Tara("Nepal", "Kathmandu"),
-        Tara("Nicaragua", "Managua"),
-        Tara("Niger", "Niamey"),
-        Tara("Nigeria", "Abuja"),
-        Tara("Norvegia", "Oslo"),
-        Tara("Noua Zeelanda", "Wellington"),
-        Tara("Oman", "Muscat"),
-        Tara("Pakistan", "Islamabad"),
-        Tara("Palau", "Melekeok"),
-        Tara("Panama", "Panama City"),
-        Tara("Papua Noua Guinee", "Port Moresby"),
-        Tara("Paraguay", "Asuncion"),
-        Tara("Peru", "Lima"),
-        Tara("Polonia", "Varsovia"),
-        Tara("Portugalia", "Lisabona"),
-        Tara("Qatar", "Doha"),
-        Tara("Romania", "Bucuresti"),
-        Tara("Rusia", "Moscova"),
-        Tara("Rwanda", "Kigali"),
-        Tara("Samoa", "Apia"),
-        Tara("San Marino", "San Marino"),
-        Tara("Sao Tome si Principe", "Sao Tome"),
-        Tara("Senegal", "Dakar"),
-        Tara("Serbia", "Belgrad"),
-        Tara("Seychelles", "Victoria"),
-        Tara("Sierra Leone", "Freetown"),
-        Tara("Singapore", "Singapore"),
-        Tara("Siria", "Damasc"),
-        Tara("Slovacia", "Bratislava"),
-        Tara("Slovenia", "Ljubljana"),
-        Tara("Somalia", "Mogadishu"),
-        Tara("Spania", "Madrid"),
-        Tara("Sri Lanka", "Sri Jayawardenepura Kotte"),
-        Tara("Statele Unite ale Americii", "Washington, D.C."),
-        Tara("Sudan", "Khartoum"),
-        Tara("Sudanul de Sud", "Juba"),
-        Tara("Suedia", "Stockholm"),
-        Tara("Surinam", "Paramaribo"),
-        Tara("Tadjikistan", "Dushanbe"),
-        Tara("Tanzania", "Dodoma"),
-        Tara("Thailanda", "Bangkok"),
-        Tara("Timorul de Est", "Dili"),
-        Tara("Togo", "Lome"),
-        Tara("Tonga", "Nuku'alofa"),
-        Tara("Trinidad si Tobago", "Port of Spain"),
-        Tara("Tunisia", "Tunis"),
-        Tara("Turcia", "Ankara"),
-        Tara("Turkmenistan", "Ashgabat"),
-        Tara("Tuvalu", "Funafuti"),
-        Tara("Ucraina", "Kiev"),
-        Tara("Uganda", "Kampala"),
-        Tara("Ungaria", "Budapesta"),
-        Tara("Uruguay", "Montevideo"),
-        Tara("Uzbekistan", "Tashkent"),
-        Tara("Vanuatu", "Port Vila"),
-        Tara("Vatican", "Vatican"),
-        Tara("Venezuela", "Caracas"),
-        Tara("Vietnam", "Hanoi"),
-        Tara("Yemen", "Sanaa"),
-        Tara("Zambia", "Lusaka"),
-        Tara("Zimbabwe", "Harare")
-    };
+{
+    Tara("Afganistan", "Kabul", Continent::ASIA, false),
+    Tara("Africa de Sud", "Pretoria", Continent::AFRICA, false),
+    Tara("Albania", "Tirana", Continent::EUROPA, true),
+    Tara("Algeria", "Alger", Continent::AFRICA, false),
+    Tara("Andorra", "Andorra la Vella", Continent::EUROPA, true),
+    Tara("Angola", "Luanda", Continent::AFRICA, false),
+    Tara("Antigua si Barbuda", "Saint John's", Continent::AMERICA, false),
+    Tara("Arabia Saudita", "Riyadh", Continent::ASIA, false),
+    Tara("Argentina", "Buenos Aires", Continent::AMERICA, false),
+    Tara("Armenia", "Erevan", Continent::ASIA, false),
+    Tara("Austria", "Viena", Continent::EUROPA, true),
+    Tara("Azerbaidjan", "Baku", Continent::ASIA, false),
+    Tara("Bahamas", "Nassau", Continent::AMERICA, false),
+    Tara("Bahrain", "Manama", Continent::ASIA, false),
+    Tara("Bangladesh", "Dhaka", Continent::ASIA, false),
+    Tara("Barbados", "Bridgetown", Continent::AMERICA, false),
+    Tara("Belarus", "Minsk", Continent::EUROPA, true),
+    Tara("Belgia", "Bruxelles", Continent::EUROPA, true),
+    Tara("Belize", "Belmopan", Continent::AMERICA, false),
+    Tara("Benin", "Porto-Novo", Continent::AFRICA, false),
+    Tara("Bhutan", "Thimphu", Continent::ASIA, false),
+    Tara("Bolivia", "Sucre", Continent::AMERICA, false),
+    Tara("Bosnia si Hertegovina", "Sarajevo", Continent::EUROPA, true),
+    Tara("Botswana", "Gaborone", Continent::AFRICA, false),
+    Tara("Brazilia", "Brasilia", Continent::AMERICA, false),
+    Tara("Brunei", "Bandar Seri Begawan", Continent::ASIA, false),
+    Tara("Bulgaria", "Sofia", Continent::EUROPA, true),
+    Tara("Burkina Faso", "Ouagadougou", Continent::AFRICA, false),
+    Tara("Burundi", "Bujumbura", Continent::AFRICA, false),
+    Tara("Cambodgia", "Phnom Penh", Continent::ASIA, false),
+    Tara("Camerun", "Yaounde", Continent::AFRICA, false),
+    Tara("Canada", "Ottawa", Continent::AMERICA, false),
+    Tara("Capul Verde", "Praia", Continent::AFRICA, false),
+    Tara("Cehia", "Praga", Continent::EUROPA, true),
+    Tara("Chile", "Santiago", Continent::AMERICA, false),
+    Tara("China", "Beijing", Continent::ASIA, false),
+    Tara("Cipru", "Nicosia", Continent::EUROPA, true),
+    Tara("Columbia", "Bogota", Continent::AMERICA, false),
+    Tara("Comoros", "Moroni", Continent::AFRICA, false),
+    Tara("Congo", "Brazzaville", Continent::AFRICA, false),
+    Tara("Congo (Republica Democrată)", "Kinshasa", Continent::AFRICA, false),
+    Tara("Coreea de Nord", "Pyongyang", Continent::ASIA, false),
+    Tara("Coreea de Sud", "Seoul", Continent::ASIA, false),
+    Tara("Costa Rica", "San Jose", Continent::AMERICA, false),
+    Tara("Croatia", "Zagreb", Continent::EUROPA, true),
+    Tara("Cuba", "Havana", Continent::AMERICA, false),
+    Tara("Danemarca", "Copenhaga", Continent::EUROPA, true),
+    Tara("Djibouti", "Djibouti", Continent::AFRICA, false),
+    Tara("Dominica", "Roseau", Continent::AMERICA, false),
+    Tara("Ecuador", "Quito", Continent::AMERICA, false),
+    Tara("Egipt", "Cairo", Continent::AFRICA, false),
+    Tara("El Salvador", "San Salvador", Continent::AMERICA, false),
+    Tara("Elvetria", "Bern", Continent::EUROPA, true),
+    Tara("Emiratele Arabe Unite", "Abu Dhabi", Continent::ASIA, false),
+    Tara("Eritrea", "Asmara", Continent::AFRICA, false),
+    Tara("Estonia", "Tallinn", Continent::EUROPA, true),
+    Tara("Eswatini", "Mbabane", Continent::AFRICA, false),
+    Tara("Etiopia", "Addis Ababa", Continent::AFRICA, false),
+    Tara("Filipine", "Manila", Continent::ASIA, false),
+    Tara("Finlanda", "Helsinki", Continent::EUROPA, true),
+    Tara("Franta", "Paris", Continent::EUROPA, true),
+    Tara("Gabon", "Libreville", Continent::AFRICA, false),
+    Tara("Gambia", "Banjul", Continent::AFRICA, false),
+    Tara("Georgia", "Tbilisi", Continent::ASIA, false),
+    Tara("Germania", "Berlin", Continent::EUROPA, true),
+    Tara("Ghana", "Accra", Continent::AFRICA, false),
+    Tara("Grecia", "Atena", Continent::EUROPA, true),
+    Tara("Grenada", "Saint George's", Continent::AMERICA, false),
+    Tara("Guatemala", "Guatemala City", Continent::AMERICA, false),
+    Tara("Guineea", "Conakry", Continent::AFRICA, false),
+    Tara("Guineea-Bissau", "Bissau", Continent::AFRICA, false),
+    Tara("Guineea Ecuatoriala", "Malabo", Continent::AFRICA, false),
+    Tara("Guyana", "Georgetown", Continent::AMERICA, false),
+    Tara("Haiti", "Port-au-Prince", Continent::AMERICA, false),
+    Tara("Honduras", "Tegucigalpa", Continent::AMERICA, false),
+    Tara("India", "New Delhi", Continent::ASIA, false),
+    Tara("Indonezia", "Jakarta", Continent::ASIA, false),
+    Tara("Iordania", "Amman", Continent::ASIA, false),
+    Tara("Irak", "Baghdad", Continent::ASIA, false),
+    Tara("Iran", "Teheran", Continent::ASIA, false),
+    Tara("Irlanda", "Dublin", Continent::EUROPA, true),
+    Tara("Islanda", "Reykjavik", Continent::EUROPA, true),
+    Tara("Israel", "Ierusalim", Continent::ASIA, false),
+    Tara("Italia", "Roma", Continent::EUROPA, true),
+    Tara("Jamaica", "Kingston", Continent::AMERICA, false),
+    Tara("Japonia", "Tokyo", Continent::ASIA, false),
+    Tara("Kazahstan", "Nur-Sultan", Continent::ASIA, false),
+    Tara("Kenya", "Nairobi", Continent::AFRICA, false),
+    Tara("Kuwait", "Kuwait City", Continent::ASIA, false),
+    Tara("Kyrgyzstan", "Bishkek", Continent::ASIA, false),
+    Tara("Laos", "Vientiane", Continent::ASIA, false),
+    Tara("Letonia", "Riga", Continent::EUROPA, true),
+    Tara("Liban", "Beirut", Continent::ASIA, false),
+    Tara("Lesotho", "Maseru", Continent::AFRICA, false),
+    Tara("Liberia", "Monrovia", Continent::AFRICA, false),
+    Tara("Libia", "Tripoli", Continent::AFRICA, false),
+    Tara("Liechtenstein", "Vaduz", Continent::EUROPA, true),
+    Tara("Lituania", "Vilnius", Continent::EUROPA, true),
+    Tara("Luxemburg", "Luxemburg", Continent::EUROPA, true),
+    Tara("Madagascar", "Antananarivo", Continent::AFRICA, false),
+    Tara("Malawi", "Lilongwe", Continent::AFRICA, false),
+    Tara("Malaysia", "Kuala Lumpur", Continent::ASIA, false),
+    Tara("Maldives", "Male", Continent::ASIA, false),
+    Tara("Mali", "Bamako", Continent::AFRICA, false),
+    Tara("Malta", "Valletta", Continent::EUROPA, true),
+    Tara("Maroc", "Rabat", Continent::AFRICA, false),
+    Tara("Mauritania", "Nouakchott", Continent::AFRICA, false),
+    Tara("Mauritius", "Port Louis", Continent::AFRICA, false),
+    Tara("Mexic", "Mexico City", Continent::AMERICA, false),
+    Tara("Moldova", "Chisinau", Continent::EUROPA, true),
+    Tara("Monaco", "Monaco", Continent::EUROPA, true),
+    Tara("Mongolia", "Ulaanbaatar", Continent::ASIA, false),
+    Tara("Muntenegru", "Podgorica", Continent::EUROPA, true),
+    Tara("Mozambic", "Maputo", Continent::AFRICA, false),
+    Tara("Myanmar", "Naypyidaw", Continent::ASIA, false),
+    Tara("Namibia", "Windhoek", Continent::AFRICA, false),
+    Tara("Nepal", "Kathmandu", Continent::ASIA, false),
+    Tara("Nicaragua", "Managua", Continent::AMERICA, false),
+    Tara("Niger", "Niamey", Continent::AFRICA, false),
+    Tara("Nigeria", "Abuja", Continent::AFRICA, false),
+    Tara("Norvegia", "Oslo", Continent::EUROPA, true),
+    Tara("Oman", "Muscat", Continent::ASIA, false),
+    Tara("Pakistan", "Islamabad", Continent::ASIA, false),
+    Tara("Panama", "Panama City", Continent::AMERICA, false),
+    Tara("Paraguay", "Asuncion", Continent::AMERICA, false),
+    Tara("Peru", "Lima", Continent::AMERICA, false),
+    Tara("Polonia", "Varsovia", Continent::EUROPA, true),
+    Tara("Portugalia", "Lisabona", Continent::EUROPA, true),
+    Tara("Qatar", "Doha", Continent::ASIA, false),
+    Tara("Romania", "Bucuresti", Continent::EUROPA, true),
+    Tara("Rusia", "Moscova", Continent::EUROPA, true),
+    Tara("Rwanda", "Kigali", Continent::AFRICA, false),
+    Tara("San Marino", "San Marino", Continent::EUROPA, true),
+    Tara("Sao Tome si Principe", "Sao Tome", Continent::AFRICA, false),
+    Tara("Senegal", "Dakar", Continent::AFRICA, false),
+    Tara("Serbia", "Belgrad", Continent::EUROPA, true),
+    Tara("Seychelles", "Victoria", Continent::AFRICA, false),
+    Tara("Sierra Leone", "Freetown", Continent::AFRICA, false),
+    Tara("Singapore", "Singapore", Continent::ASIA, false),
+    Tara("Siria", "Damasc", Continent::ASIA, false),
+    Tara("Slovacia", "Bratislava", Continent::EUROPA, true),
+    Tara("Slovenia", "Ljubljana", Continent::EUROPA, true),
+    Tara("Somalia", "Mogadishu", Continent::AFRICA, false),
+    Tara("Spania", "Madrid", Continent::EUROPA, true),
+    Tara("Sri Lanka", "Sri Jayawardenepura Kotte", Continent::ASIA, false),
+    Tara("Statele Unite ale Americii", "Washington, D.C.", Continent::AMERICA, false),
+    Tara("Sudan", "Khartoum", Continent::AFRICA, false),
+    Tara("Sudanul de Sud", "Juba", Continent::AFRICA, false),
+    Tara("Suedia", "Stockholm", Continent::EUROPA, true),
+    Tara("Surinam", "Paramaribo", Continent::AMERICA, false),
+    Tara("Tadjikistan", "Dushanbe", Continent::ASIA, false),
+    Tara("Tanzania", "Dodoma", Continent::AFRICA, false),
+    Tara("Thailanda", "Bangkok", Continent::ASIA, false),
+    Tara("Timorul de Est", "Dili", Continent::ASIA, false),
+    Tara("Togo", "Lome", Continent::AFRICA, false),
+    Tara("Trinidad si Tobago", "Port of Spain", Continent::AMERICA, false),
+    Tara("Tunisia", "Tunis", Continent::AFRICA, false),
+    Tara("Turcia", "Ankara", Continent::ASIA, false),
+    Tara("Turkmenistan", "Ashgabat", Continent::ASIA, false),
+    Tara("Ucraina", "Kiev", Continent::EUROPA, true),
+    Tara("Uganda", "Kampala", Continent::AFRICA, false),
+    Tara("Ungaria", "Budapesta", Continent::EUROPA, true),
+    Tara("Uruguay", "Montevideo", Continent::AMERICA, false),
+    Tara("Uzbekistan", "Tashkent", Continent::ASIA, false),
+    Tara("Vatican", "Vatican", Continent::EUROPA, true),
+    Tara("Venezuela", "Caracas", Continent::AMERICA, false),
+    Tara("Vietnam", "Hanoi", Continent::ASIA, false),
+    Tara("Yemen", "Sanaa", Continent::ASIA, false),
+    Tara("Zambia", "Lusaka", Continent::AFRICA, false),
+    Tara("Zimbabwe", "Harare", Continent::AFRICA, false)
+};
 
     std::string numeJucator;
     std::cout << "Introdu numele tau: ";
     std::getline(std::cin, numeJucator);
 
-    Joc joc(numeJucator, tari);
+    std::cout << "\nSelecteaza dificultatea:\n";
+    std::cout << "1. Usor (Doar tari populare - din Europa)\n";
+    std::cout << "2. Dificil (Toate tarile)\n";
+    std::cout << "Alegere (1-2): ";
+
+    int optiuneDificultate;
+    std::cin >> optiuneDificultate;
+    std::cin.ignore();
+
+    Dificultate dificultate;
+
+    if(optiuneDificultate == 1)
+        dificultate = Dificultate ::USOR;
+    else
+        dificultate = Dificultate::DIFICIL;
+
+
+    std::vector<Tara> tariFiltrate;
+    if (dificultate == Dificultate::USOR) {
+        for (const auto& tara : tari) {
+            if (tara.getContinent() == Continent::EUROPA && tara.estePopulara()) {
+                tariFiltrate.push_back(tara);
+            }
+        }
+    } else {
+        tariFiltrate = tari;
+    }
+
+
+    Continent continent;
+
+    if(dificultate == Dificultate::USOR)
+        continent = Continent::EUROPA;
+    else
+        continent = Continent::TOATE;
+
+    Joc joc(numeJucator, tariFiltrate, continent, dificultate);
     joc.start();
+
     return 0;
 }

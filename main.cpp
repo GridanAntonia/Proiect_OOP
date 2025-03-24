@@ -187,7 +187,7 @@ private:
     std::vector<Tara> tari;
     std::vector<Tara> tariIntrebate;
     Continent continentCurent;
-    Dificultate dificultate;
+    //Dificultate dificultate;
 
 
     void amestecaTari()
@@ -226,8 +226,8 @@ private:
 
 public:
 
-    explicit Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari, Continent continent, Dificultate dificultate)
-        : jucator(numeJucator), tari(listaTari), continentCurent(continent), dificultate(dificultate)
+    explicit Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari, Continent continent/*, Dificultate dificultate*/)
+        : jucator(numeJucator), tari(listaTari), continentCurent(continent)/*, dificultate(dificultate)*/
     {
         if (tari.empty())
         {
@@ -472,7 +472,7 @@ int main()
     std::cout << "2. Dificil (Toate tarile)\n";
     std::cout << "Alegere (1-2): ";
 
-    int optiuneDificultate;
+    int optiuneDificultate = 1;
     std::cin >> optiuneDificultate;
     std::cin.ignore();
 
@@ -503,7 +503,7 @@ int main()
     else
         continent = Continent::TOATE;
 
-    Joc joc(numeJucator, tariFiltrate, continent, dificultate);
+    Joc joc(numeJucator, tariFiltrate, continent/*, dificultate*/);
     joc.start();
 
     return 0;

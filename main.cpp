@@ -19,7 +19,7 @@ public:
 
     ~Tara() {};
 
-    Tara(const std::string& nume, const std::string& capitala)
+    explicit Tara(const std::string& nume, const std::string& capitala)
     {
         this->nume = nume;
         this->capitala = capitala;
@@ -38,7 +38,7 @@ public:
         return *this;
     }
 
-    void setNume(const std::string& nume)
+    /*void setNume(const std::string& nume)
     {
         this->nume = nume;
     }
@@ -46,14 +46,14 @@ public:
     void setCapitala(const std::string& capitala)
     {
         this->capitala = capitala;
-    }
+    }*/
 
-    std::string getNume() const
+    const std::string& getNume() const
     {
         return nume;
     }
 
-    std::string getCapitala() const
+    const std::string& getCapitala() const
     {
         return capitala;
     }
@@ -81,7 +81,7 @@ public:
         puncte = 0;
     }
 
-    Scor(int puncte)
+    explicit Scor(int puncte)
     {
         this->puncte = puncte;
     }
@@ -115,7 +115,7 @@ private:
     Scor scor;
 
 public:
-    Jucator(const std::string& NumeJucator)
+    explicit Jucator(const std::string& NumeJucator)
     {
         this->NumeJucator = NumeJucator;
     }
@@ -125,10 +125,10 @@ public:
         scor.adaugaPuncte(puncte);
     }
 
-    void reseteazaScor()
+    /*void reseteazaScor()
     {
         scor.reseteaza();
-    }
+    }*/
 
     int getScor() const
     {
@@ -176,7 +176,7 @@ private:
 
 public:
 
-    Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari)
+    explicit Joc(const std::string& numeJucator, const std::vector<Tara>& listaTari)
         : jucator(numeJucator), tari(listaTari)
     {
         if (tari.empty())
@@ -412,11 +412,6 @@ int main()
         Tara("Zimbabwe", "Harare")
     };
 
-    if (tari.empty())
-    {
-        std::cerr << "Eroare: Lista de tari este goala.\n";
-        return 1;
-    }
     std::string numeJucator;
     std::cout << "Introdu numele tau: ";
     std::getline(std::cin, numeJucator);

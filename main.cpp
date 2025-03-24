@@ -91,10 +91,10 @@ public:
         puncte += valoare;
     }
 
-    void reseteaza()
+    /*void reseteaza()
     {
         puncte = 0;
-    }
+    }*/
 
     int getPuncte() const
     {
